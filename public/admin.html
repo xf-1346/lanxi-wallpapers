@@ -280,31 +280,45 @@
         }
 
         async function addWallpaper() {
-            const url = document.getElementById('imgUrl').value;
-            const text = document.getElementById('imgText').value;
-            const desc = document.getElementById('imgDesc').value || '高清精美壁纸，支持手机和电脑使用';
+            const url = document.getElementById('imgUrl').value.trim();
+            const text = document.getElementById('imgText').value.trim();
+            const desc = document.getElementById('imgDesc').value.trim() || '高清精美壁纸，支持手机和电脑使用';
             if (!url || !text) { alert('请填写图片URL和标题'); return; }
             
-            await fetch('/api/wallpapers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url, text, desc })
-            });
-            
-            document.getElementById('imgUrl').value = '';
-            document.getElementById('imgText').value = '';
-            document.getElementById('imgDesc').value = '';
-            await loadData();
-            renderAdmin();
-            initStats();
+            try {
+                const res = await fetch('/api/wallpapers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, text, desc })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert('上传失败：' + (err.error || res.statusText));
+                    return;
+                }
+                // 成功才清空
+                document.getElementById('imgUrl').value = '';
+                document.getElementById('imgText').value = '';
+                document.getElementById('imgDesc').value = '';
+                await loadData();
+                renderAdmin();
+                initStats();
+                alert('✅ 壁纸添加成功！');
+            } catch (e) {
+                alert('上传失败：网络错误，请检查控制台');
+                console.error(e);
+            }
         }
 
         async function deleteWallpaper(id) {
             if (!confirm('确定要删除这张壁纸吗？')) return;
-            await fetch(`/api/wallpapers/${id}`, { method: 'DELETE' });
-            await loadData();
-            renderAdmin();
-            initStats();
+            try {
+                const res = await fetch(`/api/wallpapers/${id}`, { method: 'DELETE' });
+                if (!res.ok) { alert('删除失败'); return; }
+                await loadData();
+                renderAdmin();
+                initStats();
+            } catch (e) { alert('删除失败：网络错误'); }
         }
 
         function openEdit(id) {
@@ -323,17 +337,20 @@
 
         async function saveEdit() {
             if (!editingId) return;
-            await fetch(`/api/wallpapers/${editingId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: document.getElementById('editTitle').value,
-                    desc: document.getElementById('editDesc').value
-                })
-            });
-            await loadData();
-            renderAdmin();
-            closeEdit();
+            try {
+                const res = await fetch(`/api/wallpapers/${editingId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: document.getElementById('editTitle').value,
+                        desc: document.getElementById('editDesc').value
+                    })
+                });
+                if (!res.ok) { alert('保存失败'); return; }
+                await loadData();
+                renderAdmin();
+                closeEdit();
+            } catch (e) { alert('保存失败：网络错误'); }
         }
 
         function renderAdmin() {
@@ -342,17 +359,19 @@
                 list.innerHTML = '<p style="color: #8ab4f8; text-align: center;">暂无壁纸</p>'; 
                 return; 
             }
-            list.innerHTML = wallpapers.map(w => `
+            list.innerHTML = wallpapers.map(w => {
+                const descText = w.desc || w.description || '';
+                return `
                 <div class="wallpaper-card">
-                    <img src="${w.url}" alt="${w.text}">
-                    <div class="info"><h4>${w.text}</h4></div>
+                    <img src="${w.url}" alt="${w.text}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22><rect fill=%22%231a2744%22 width=%22300%22 height=%22200%22/><text fill=%22%238ab4f8%22 x=%22150%22 y=%22100%22 text-anchor=%22middle%22>图片加载失败</text></svg>'">
+                    <div class="info"><h4>${w.text}</h4><p style="color:#8ab4f8;font-size:12px;margin-top:4px;">${descText}</p></div>
                     <div class="stats"><span>⬇️ ${w.downloads || 0} 次下载</span></div>
                     <div class="actions">
                         <button class="btn-secondary" onclick="openEdit(${w.id})">编辑</button>
                         <button class="btn-danger" onclick="deleteWallpaper(${w.id})">删除</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         document.addEventListener('keydown', (e) => { 

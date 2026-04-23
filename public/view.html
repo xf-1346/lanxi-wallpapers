@@ -186,14 +186,16 @@
                 gallery.innerHTML = '<p style="color: #8ab4f8; text-align: center;">暂无壁纸</p>'; 
                 return; 
             }
-            gallery.innerHTML = wallpapers.map((w, i) => `
+            gallery.innerHTML = wallpapers.map((w, i) => {
+                const descText = w.desc || w.description || '高清精美壁纸，支持手机和电脑使用';
+                return `
                 <div class="wallpaper-item" onclick="openDetail(${w.id})" style="animation: fadeInUp 0.5s ease ${i * 0.1}s backwards">
-                    <img src="${w.url}" alt="${w.text}" loading="lazy">
+                    <img src="${w.url}" alt="${w.text}" loading="lazy" onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(135deg,#1a2744,#0f1a2e)';this.parentElement.innerHTML+='<div style=display:flex;align-items:center;justify-content:center;height:100%;color:#8ab4f8>图片加载失败</div>'">
                     <div class="hover-info">
                         <div class="wallpaper-title">${w.text}</div>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function openDetail(id) {
@@ -202,7 +204,7 @@
             currentWallpaper = wallpaper;
             document.getElementById('detailImage').src = wallpaper.url;
             document.getElementById('detailTitle').textContent = wallpaper.text;
-            document.getElementById('detailDesc').textContent = wallpaper.desc || '高清精美壁纸，支持手机和电脑使用';
+            document.getElementById('detailDesc').textContent = wallpaper.desc || wallpaper.description || '高清精美壁纸，支持手机和电脑使用';
             document.getElementById('detailModal').classList.add('active');
             document.body.style.overflow = 'hidden';
         }
